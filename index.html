@@ -1,0 +1,233 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Clauth by pelle</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Clauth</h1>
+        <p>Authentication library for Clojure and Compojure</p>
+        <p class="view"><a href="https://github.com/pelle/clauth">View the Project on GitHub <small>pelle/clauth</small></a></p>
+        <ul>
+          <li><a href="https://github.com/pelle/clauth/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/pelle/clauth/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/pelle/clauth">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>clauth - OAuth 2 based simple authentication system for Clojure Ring</h1>
+
+<p><a href="http://travis-ci.org/pelle/clauth"><img src="https://secure.travis-ci.org/pelle/clauth.png" alt="Build Status"></a></p>
+
+<p>This is a simple OAuth 2 provider that is designed to be used as a primary authentication provider for a Clojure Ring app.</p>
+
+<p>It is under development by a Clojure novice. Please help give feedback on use of idiomatic clojure.</p>
+
+<p>It currently handles OAuth2 bearer authentication and interactive authentication. </p>
+
+<p>See <a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-08">draft-ietf-oauth-v2-bearer</a></p>
+
+<p>The following bearer tokens are implemented:</p>
+
+<ul>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-08#section-2.1">Authorization header</a></li>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-08#section-2.2">Form encoded body parameter</a></li>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-08#section-2.3">URI query field</a></li>
+<li>Non standard http cookie ('access_token') for use in interactive applications</li>
+<li>Non standard session ('access_token') for use in interactive applications</li>
+</ul><h2>Install</h2>
+
+<p>Add the following dependency to your <code>project.clj</code> file:</p>
+
+<pre><code>[clauth "1.0.0-rc3"]
+</code></pre>
+
+<h2>Usage</h2>
+
+<p>There are currently 2 middlewares defined:</p>
+
+<ul>
+<li>wrap-bearer-token</li>
+<li>require-bearer-token!</li>
+</ul><p>Both of them take as a parameter a function which should return a object representing the token. This could be a user object, but could also be a token object with specific meta-data. I may standardize on something when more of the framework is developed.</p>
+
+<p>The object returned by your function is set to :access-token entry in the request.</p>
+
+<p>The difference between wrap-bearer-token and require-bearer-token! is that wrap will find a token but not require it. require-bearer-token will return a <a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-bearer-08#section-2.4">HTTP 401 header</a>.</p>
+
+<h2>Grant Types</h2>
+
+<p>Currently the following Grant types are supported:</p>
+
+<ul>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-4.1">Authorization Code Grant</a></li>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-4.4">Client Credential Grant</a></li>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-4.3">Resource Owner Password Credential Grant</a></li>
+</ul><p>Grant types are implemented using multimethods. To implement one </p>
+
+<pre><code>(defmethod token-request-handler "my_grant_type" [req authenticator] ...)
+</code></pre>
+
+<h2>Authorization request</h2>
+
+<p>We currently support the following authorization requests:</p>
+
+<ul>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-4.1">Authorization Code Grant</a></li>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-4.2">Implicit Grant</a></li>
+</ul><h2>Tokens</h2>
+
+<p>There is a protocol defined called Expirable which implements one function:</p>
+
+<pre><code>(is-valid? token)
+</code></pre>
+
+<p>This is implementend by IPersistentMap so {} represents a valid token where {:expires (date-time 2011)} is invalid.</p>
+
+<p>A OAuthToken record exists which can be instantiated and stored easily by the create-token function:</p>
+
+<pre><code>(create-token client user)
+</code></pre>
+
+<h2>Client Applications</h2>
+
+<p>A ClientApplication record exists which can be instantiated and stored easily by the register-app function:</p>
+
+<pre><code>(register-app name url)
+</code></pre>
+
+<p>A client application has a client-id and a client-secret which is used for issuing tokens.</p>
+
+<h2>Users</h2>
+
+<p>A User record exists which can be instantiated and stored easily by the register-user function:</p>
+
+<pre><code>(register-user login password name url)
+</code></pre>
+
+<h2>Stores</h2>
+
+<p>Stores are used to store tokens and will be used to store clients and users as well.</p>
+
+<p>There is a generalized protocol called Store and currently a simple memory implementation used for it.</p>
+
+<p>It should be pretty simple to implement this Store with redis, sql, datomic or what have you. </p>
+
+<p>It includes a simple Redis implementation.</p>
+
+<p>The stores used by the various parts are defined in an atom for each type. reset! each of them with your own implementation.</p>
+
+<p>The following stores are currently defined:</p>
+
+<ul>
+<li>token-store is in clauth.token/token-store</li>
+<li>auth-code-store is in clauth.auth-code/auth-code-store</li>
+<li>client-store is in clauth.client/client-store</li>
+<li>user-store is in clauth.user/user-store</li>
+</ul><p>To use the redis store add the following to your code:</p>
+
+<pre><code>(reset! token-store (create-redis-store "tokens"))
+(reset! auth-code-store (create-redis-store "auth-codes"))
+(reset! client-store (create-redis-store "clients"))
+(reset! user-store (create-redis-store "users"))
+</code></pre>
+
+<p>And wrap your handler with a redis connection middleware similar to this: </p>
+
+<pre><code>(defn wrap-redis-store [app]
+  (fn [req]
+    (redis/with-server
+     {:host "127.0.0.1"
+      :port 6379
+      :db 14
+     }
+     (app req))))
+</code></pre>
+
+<h2>Issuing OAuth Tokens</h2>
+
+<p>There is currently a single token-handler that provides token issuance called token-handler. Install it in your routes by convention at "/token" or "/oauth/token". </p>
+
+<pre><code>(defn routes [req]
+  (case (req :uri)
+    "/token" ((token-handler) req )
+    ((require-bearer-token! handler) req)))
+</code></pre>
+
+<h2>Using as primary user authentication on server</h2>
+
+<p>One of the ideas of this is using OAuth tokens together with traditional sessions based authentication providing the benefits of both. To do this we create a new token when a user logs in and adds it to the session.</p>
+
+<p>Why is this a good idea?</p>
+
+<ul>
+<li>You will be able to view a list of other sessions going on for security purposes</li>
+<li>You will be able to remotely log of another session</li>
+<li>Your app deals with tokens only. So this is also ideal for an API with a javascript front end</li>
+</ul><p>To use this make sure to wrap the session middleware. We have a login handler endpoint that could be used like this:</p>
+
+<pre><code>(defn routes [master-client]
+  (fn [req]
+  (case (req :uri)
+    "/login" ((login-handler master-client) req )
+    ((require-bearer-token! handler) req))))
+</code></pre>
+
+<p>The master-client is a client record representing your own application. A default login view is defined in clauth.views/login-form-handler but you can add your own. This just needs to be a ring handler presenting a form with the parameters "username" and "password".</p>
+
+<pre><code>(defn routes [master-client]
+  (fn [req]
+  (case (req :uri)
+    "/login" ((login-handler my-own-login-form-handler master-client) req )
+    ((require-bearer-token! handler) req))))
+</code></pre>
+
+<h2>Run Demo App</h2>
+
+<p>A mini server demo is available. It creates a client for you and prints out instructions on how to issue tokens with curl.</p>
+
+<pre><code>lein run -m clauth.demo
+</code></pre>
+
+<h2>TODO</h2>
+
+<p>The goal is to implement the full <a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25">OAuth2 spec</a>. The only main feature missing is. I'll aim for that for 1.1 as most people currently don't use refresh tokens:</p>
+
+<ul>
+<li><a href="http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-1.5">Refresh Tokens</a></li>
+</ul><h2>Contribute</h2>
+
+<p>You will need to have a Redis database running in the background in order to have some of the tests pass, otherwise, you will get an error about the connection being refused.</p>
+
+<p>If you have Homebrew on Mac OSX, you can get Redis by typing <code>brew install redis</code> in the command line. Once that's done, get the Redis database started in your Terminal window by typing the following:</p>
+
+<pre><code>redis-server /usr/local/etc/redis.conf
+</code></pre>
+
+<h2>License</h2>
+
+<p>Copyright (C) 2012 Pelle Braendgaard <a href="http://stakeventures.com">http://stakeventures.com</a></p>
+
+<p>Distributed under the Eclipse Public License, the same as Clojure.</p>
+      </section>
+    </div>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/pelle">pelle</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    
+  </body>
+</html>
